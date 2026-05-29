@@ -1,21 +1,37 @@
-// ============ SUPABASE SETUP ============
-// 🔴 PUT YOUR SUPABASE DETAILS HERE
-const supabaseUrl = "YOUR_SUPABASE_URL";
-const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
-
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-// ============ INIT ============
+// ================= SAFE INIT =================
 
 document.addEventListener("DOMContentLoaded", () => {
-    initializeTheme();
+
+    console.log("AUTH JS LOADED");
+
+    // Check Supabase loaded
+    if (!window.supabase) {
+        console.error("Supabase not loaded. Check script order in HTML.");
+        return;
+    }
+
+    // Create Supabase client safely
+    const supabaseUrl = "YOUR_SUPABASE_URL";
+    const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
+
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    // expose globally so functions can use it
+    window.supabaseClient = supabase;
+
+    // Theme (safe check)
+    if (typeof initializeTheme === "function") {
+        initializeTheme();
+    }
 
     setupAuthForms();
 });
 
-// ============ FORM TOGGLE ============
+
+// ================= FORM TOGGLE =================
 
 function setupAuthForms() {
+
     const toggleToSignup = document.getElementById("toggleToSignup");
     const toggleToLogin = document.getElementById("toggleToLogin");
 
@@ -25,6 +41,13 @@ function setupAuthForms() {
     const loginFormElement = document.getElementById("loginFormElement");
     const signupFormElement = document.getElementById("signupFormElement");
 
+    // Safety check
+    if (!loginForm || !signupForm) {
+        console.error("Forms not found in HTML");
+        return;
+    }
+
+    // SHOW SIGNUP FORM
     if (toggleToSignup) {
         toggleToSignup.addEventListener("click", (e) => {
             e.preventDefault();
@@ -33,6 +56,7 @@ function setupAuthForms() {
         });
     }
 
+    // SHOW LOGIN FORM
     if (toggleToLogin) {
         toggleToLogin.addEventListener("click", (e) => {
             e.preventDefault();
@@ -41,6 +65,7 @@ function setupAuthForms() {
         });
     }
 
+    // FORM EVENTS
     if (loginFormElement) {
         loginFormElement.addEventListener("submit", handleLogin);
     }
@@ -50,7 +75,8 @@ function setupAuthForms() {
     }
 }
 
-// ============ SIGNUP (SUPABASE) ============
+
+// ================= SIGNUP =================
 
 async function handleSignup(e) {
     e.preventDefault();
@@ -75,7 +101,7 @@ async function handleSignup(e) {
         return showError(errorDiv, "Passwords do not match");
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await window.supabaseClient.auth.signUp({
         email,
         password,
         options: {
@@ -89,17 +115,17 @@ async function handleSignup(e) {
         return showError(errorDiv, error.message);
     }
 
-    // Success message
     errorDiv.style.color = "green";
-    errorDiv.textContent = "Account created! Check your email to confirm.";
+    errorDiv.textContent = "Account created! Check email (if confirmation enabled).";
 
     setTimeout(() => {
-        document.getElementById("signupForm").classList.add("hidden");
-        document.getElementById("loginForm").classList.remove("hidden");
+        signupForm.classList.add("hidden");
+        loginForm.classList.remove("hidden");
     }, 2000);
 }
 
-// ============ LOGIN (SUPABASE) ============
+
+// ================= LOGIN =================
 
 async function handleLogin(e) {
     e.preventDefault();
@@ -114,7 +140,7 @@ async function handleLogin(e) {
         return showError(errorDiv, "Please fill in all fields");
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await window.supabaseClient.auth.signInWithPassword({
         email,
         password
     });
@@ -123,29 +149,29 @@ async function handleLogin(e) {
         return showError(errorDiv, error.message);
     }
 
-    // Save session user (optional but useful)
     localStorage.setItem("currentUser", JSON.stringify(data.user));
 
-    // Redirect to dashboard/home
     window.location.href = "index.html";
 }
 
-// ============ ERROR HANDLER ============
+
+// ================= ERROR HANDLER =================
 
 function showError(div, message) {
     div.style.color = "red";
     div.textContent = message;
 }
 
-// ============ AUTH HELPERS ============
+
+// ================= HELPERS =================
 
 async function getCurrentUser() {
-    const { data } = await supabase.auth.getUser();
+    const { data } = await window.supabaseClient.auth.getUser();
     return data.user;
 }
 
 async function logoutUser() {
-    await supabase.auth.signOut();
+    await window.supabaseClient.auth.signOut();
     localStorage.removeItem("currentUser");
     window.location.href = "auth.html";
 }
