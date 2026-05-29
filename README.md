@@ -6,3 +6,4 @@ function
 -inventory should have the followind details name,productid,price,no available 
 -the inventory should have a way of idendifying if the products available alow on stock or not
 
+-sign up and login fetches and stores data in db table 
