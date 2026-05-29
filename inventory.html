@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockEase - Product Inventory Management</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav>
+        <div class="container">
+            <div class="logo">📦 Inventory System</div>
+            <div class="nav-right">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="inventory.html" class="active">Inventory</a></li>
+                </ul>
+                <button class="theme-toggle" id="themeToggle">☀️ Light Mode</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1>StockEase</h1>
+        <p>Smart inventory management for your products. Easily track, manage, and optimize your stock levels.</p>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Products</h3>
+                <div class="stat-value" id="totalProducts">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>In Stock</h3>
+                <div class="stat-value" id="inStockCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Low Stock</h3>
+                <div class="stat-value" id="lowStockCount">0</div>
+            </div>
+        </div>
+
+        <!-- Filter & Sort Controls -->
+        <div class="filter-controls">
+            <input type="text" id="searchInput" placeholder="Search by product name or ID...">
+            <button id="sortBtn" class="sort-btn">Sort A-Z</button>
+            <button id="addBtn" class="primary-btn">+ Add Product</button>
+        </div>
+
+        <!-- Table -->
+        <h2>Product List</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Product ID</th>
+                    <th>Price</th>
+                    <th>Available</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="productTable">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="addProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Product</h2>
+                <button class="modal-close" data-modal="addProductModal">&times;</button>
+            </div>
+            <form id="addProductForm" class="product-form">
+                <div class="form-group">
+                    <label for="productName">Product Name *</label>
+                    <input type="text" id="productName" name="productName" required>
+                </div>
+                <div class="form-group">
+                    <label for="productId">Product ID *</label>
+                    <input type="text" id="productId" name="productId" required>
+                </div>
+                <div class="form-group">
+                    <label for="productPrice">Price ($) *</label>
+                    <input type="number" id="productPrice" name="productPrice" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="productStock">Available Stock *</label>
+                    <input type="number" id="productStock" name="productStock" min="0" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" data-modal="addProductModal">Cancel</button>
+                    <button type="submit" class="btn-submit">Add Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div id="editProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Product</h2>
+                <button class="modal-close" data-modal="editProductModal">&times;</button>
+            </div>
+            <form id="editProductForm" class="product-form">
+                <div class="form-group">
+                    <label for="editProductName">Product Name *</label>
+                    <input type="text" id="editProductName" name="productName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editProductId">Product ID *</label>
+                    <input type="text" id="editProductId" name="productId" required>
+                </div>
+                <div class="form-group">
+                    <label for="editProductPrice">Price ($) *</label>
+                    <input type="number" id="editProductPrice" name="productPrice" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="editProductStock">Available Stock *</label>
+                    <input type="number" id="editProductStock" name="productStock" min="0" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" data-modal="editProductModal">Cancel</button>
+                    <button type="submit" class="btn-submit">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Delete Product</h2>
+                <button class="modal-close" data-modal="deleteModal">&times;</button>
+            </div>
+            <p>Are you sure you want to delete this product? This action cannot be undone.</p>
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" data-modal="deleteModal">Cancel</button>
+                <button type="button" id="confirmDelete" class="btn-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Inventory System. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
