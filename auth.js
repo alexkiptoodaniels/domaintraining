@@ -1,196 +1,151 @@
-// ============ USER AUTHENTICATION ============
+// ============ SUPABASE SETUP ============
+// 🔴 PUT YOUR SUPABASE DETAILS HERE
+const supabaseUrl = "YOUR_SUPABASE_URL";
+const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
 
-// Initialize auth system
-document.addEventListener('DOMContentLoaded', function() {
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+// ============ INIT ============
+
+document.addEventListener("DOMContentLoaded", () => {
     initializeTheme();
-    
-    // Only run auth logic on auth.html page
-    if (window.location.pathname.includes('auth.html')) {
-        setupAuthForms();
-    }
+
+    setupAuthForms();
 });
 
 // ============ FORM TOGGLE ============
+
 function setupAuthForms() {
-    const toggleToSignup = document.getElementById('toggleToSignup');
-    const toggleToLogin = document.getElementById('toggleToLogin');
-    const loginForm = document.getElementById('loginForm');
-    const signupForm = document.getElementById('signupForm');
-    const loginFormElement = document.getElementById('loginFormElement');
-    const signupFormElement = document.getElementById('signupFormElement');
+    const toggleToSignup = document.getElementById("toggleToSignup");
+    const toggleToLogin = document.getElementById("toggleToLogin");
+
+    const loginForm = document.getElementById("loginForm");
+    const signupForm = document.getElementById("signupForm");
+
+    const loginFormElement = document.getElementById("loginFormElement");
+    const signupFormElement = document.getElementById("signupFormElement");
 
     if (toggleToSignup) {
-        toggleToSignup.addEventListener('click', (e) => {
+        toggleToSignup.addEventListener("click", (e) => {
             e.preventDefault();
-            loginForm.classList.add('hidden');
-            signupForm.classList.remove('hidden');
+            loginForm.classList.add("hidden");
+            signupForm.classList.remove("hidden");
         });
     }
 
     if (toggleToLogin) {
-        toggleToLogin.addEventListener('click', (e) => {
+        toggleToLogin.addEventListener("click", (e) => {
             e.preventDefault();
-            signupForm.classList.add('hidden');
-            loginForm.classList.remove('hidden');
+            signupForm.classList.add("hidden");
+            loginForm.classList.remove("hidden");
         });
     }
 
     if (loginFormElement) {
-        loginFormElement.addEventListener('submit', handleLogin);
+        loginFormElement.addEventListener("submit", handleLogin);
     }
 
     if (signupFormElement) {
-        signupFormElement.addEventListener('submit', handleSignup);
+        signupFormElement.addEventListener("submit", handleSignup);
     }
 }
 
-// ============ LOGIN HANDLER ============
-function handleLogin(e) {
+// ============ SIGNUP (SUPABASE) ============
+
+async function handleSignup(e) {
     e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    const errorDiv = document.getElementById('loginError');
 
-    // Clear previous errors
-    errorDiv.classList.remove('show');
-    errorDiv.textContent = '';
+    const name = document.getElementById("signupName").value.trim();
+    const email = document.getElementById("signupEmail").value.trim();
+    const password = document.getElementById("signupPassword").value;
+    const confirmPassword = document.getElementById("signupConfirmPassword").value;
+    const errorDiv = document.getElementById("signupError");
 
-    // Validate input
-    if (!email || !password) {
-        showError(errorDiv, 'Please fill in all fields');
-        return;
-    }
+    errorDiv.textContent = "";
 
-    // Get users from localStorage
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    const user = users.find(u => u.email === email);
-
-    if (!user) {
-        showError(errorDiv, 'Email not found. Please sign up first.');
-        return;
-    }
-
-    // Verify password (simple comparison - in production use bcrypt)
-    if (user.password !== hashPassword(password)) {
-        showError(errorDiv, 'Invalid email or password');
-        return;
-    }
-
-    // Login successful
-    localStorage.setItem('currentUser', JSON.stringify({
-        id: user.id,
-        name: user.name,
-        email: user.email
-    }));
-
-    window.location.href = 'index.html';
-}
-
-// ============ SIGNUP HANDLER ============
-function handleSignup(e) {
-    e.preventDefault();
-    const name = document.getElementById('signupName').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value;
-    const confirmPassword = document.getElementById('signupConfirmPassword').value;
-    const errorDiv = document.getElementById('signupError');
-
-    // Clear previous errors
-    errorDiv.classList.remove('show');
-    errorDiv.textContent = '';
-
-    // Validate input
     if (!name || !email || !password || !confirmPassword) {
-        showError(errorDiv, 'Please fill in all fields');
-        return;
+        return showError(errorDiv, "Please fill in all fields");
     }
 
     if (password.length < 6) {
-        showError(errorDiv, 'Password must be at least 6 characters');
-        return;
+        return showError(errorDiv, "Password must be at least 6 characters");
     }
 
     if (password !== confirmPassword) {
-        showError(errorDiv, 'Passwords do not match');
-        return;
+        return showError(errorDiv, "Passwords do not match");
     }
 
-    // Validate email format
-    if (!isValidEmail(email)) {
-        showError(errorDiv, 'Please enter a valid email address');
-        return;
-    }
-
-    // Get existing users
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-
-    // Check if email already exists
-    if (users.find(u => u.email === email)) {
-        showError(errorDiv, 'Email already registered. Please login instead.');
-        return;
-    }
-
-    // Create new user
-    const newUser = {
-        id: generateUserId(),
-        name,
+    const { data, error } = await supabase.auth.signUp({
         email,
-        password: hashPassword(password),
-        createdAt: new Date().toISOString()
-    };
+        password,
+        options: {
+            data: {
+                full_name: name
+            }
+        }
+    });
 
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
+    if (error) {
+        return showError(errorDiv, error.message);
+    }
 
-    // Show success message and redirect
-    const successDiv = document.createElement('div');
-    successDiv.className = 'success-message';
-    successDiv.textContent = 'Account created successfully! Redirecting to login...';
-    document.getElementById('signupForm').appendChild(successDiv);
+    // Success message
+    errorDiv.style.color = "green";
+    errorDiv.textContent = "Account created! Check your email to confirm.";
 
     setTimeout(() => {
-        document.getElementById('signupForm').classList.add('hidden');
-        document.getElementById('loginForm').classList.remove('hidden');
-    }, 1500);
+        document.getElementById("signupForm").classList.add("hidden");
+        document.getElementById("loginForm").classList.remove("hidden");
+    }, 2000);
 }
 
-// ============ UTILITY FUNCTIONS ============
-function showError(errorDiv, message) {
-    errorDiv.textContent = message;
-    errorDiv.classList.add('show');
-}
+// ============ LOGIN (SUPABASE) ============
 
-function isValidEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-}
+async function handleLogin(e) {
+    e.preventDefault();
 
-function hashPassword(password) {
-    // Simple hash for demo - in production use bcrypt or similar
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-        const char = password.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    const errorDiv = document.getElementById("loginError");
+
+    errorDiv.textContent = "";
+
+    if (!email || !password) {
+        return showError(errorDiv, "Please fill in all fields");
     }
-    return hash.toString(36);
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+    });
+
+    if (error) {
+        return showError(errorDiv, error.message);
+    }
+
+    // Save session user (optional but useful)
+    localStorage.setItem("currentUser", JSON.stringify(data.user));
+
+    // Redirect to dashboard/home
+    window.location.href = "index.html";
 }
 
-function generateUserId() {
-    return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+// ============ ERROR HANDLER ============
+
+function showError(div, message) {
+    div.style.color = "red";
+    div.textContent = message;
 }
 
-// ============ CHECK AUTH STATUS ============
-function isUserLoggedIn() {
-    return localStorage.getItem('currentUser') !== null;
+// ============ AUTH HELPERS ============
+
+async function getCurrentUser() {
+    const { data } = await supabase.auth.getUser();
+    return data.user;
 }
 
-function getCurrentUser() {
-    const user = localStorage.getItem('currentUser');
-    return user ? JSON.parse(user) : null;
-}
-
-function logoutUser() {
-    localStorage.removeItem('currentUser');
-    window.location.href = 'auth.html';
+async function logoutUser() {
+    await supabase.auth.signOut();
+    localStorage.removeItem("currentUser");
+    window.location.href = "auth.html";
 }
