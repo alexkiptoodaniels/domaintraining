@@ -18,7 +18,6 @@ CREATE TABLE users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL UNIQUE,
   full_name VARCHAR(255),
-  phone_number VARCHAR(20),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -88,16 +87,24 @@ CREATE INDEX idx_inventory_product_name ON inventory(product_name);
 **Features Added:**
 - ✅ Integrated Supabase authentication (sign up & login)
 - ✅ Auto-logout functionality with Logout button in navbar
-- ✅ Dynamic navbar: "Login/Sign Up" converts to "Logout" when user is authenticated
+- ✅ Dynamic navbar: "Login" converts to "Logout" when user is authenticated
 - ✅ User session persistence using localStorage
 - ✅ Added SQL database schema with Row Level Security (RLS)
 - ✅ Created comprehensive Supabase setup guide with SQL queries
+- ✅ Split authentication into separate login.html and signup.html pages
+- ✅ Updated navbar to link to separate login page
+- ✅ Sign up and login now have dedicated pages instead of toggled forms
 
 **Features Removed:**
-- ❌ Removed phone number field from sign-up form (causing database errors)
-- ❌ Removed phone_number storage from user profile
+- ❌ Removed phone number field from sign-up form
+- ❌ Removed phone_number column from users table in database
+- ❌ Removed database insert calls from signup logic
+- ❌ Removed form toggle functionality (separate pages instead)
 
 **Files Modified:**
-- `auth.html` - Removed phone number input field from sign-up form
-- `auth.js` - Removed phone number validation and database insert logic
-- `README.md` - Updated database schema and changelog
+- `login.html` - New page for user login
+- `signup.html` - New page for user registration
+- `index.html` - Updated navbar to link to login.html
+- `inventory.html` - Updated navbar to link to login.html
+- `auth.js` - Removed form toggle logic, updated logout redirect to login.html
+- `README.md` - Updated users table schema (removed phone_number field) and changelog

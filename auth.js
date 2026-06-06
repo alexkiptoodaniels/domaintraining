@@ -28,46 +28,16 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// ================= FORM TOGGLE =================
+// ================= FORM SETUP =================
 
 function setupAuthForms() {
-
-    const toggleToSignup = document.getElementById("toggleToSignup");
-    const toggleToLogin = document.getElementById("toggleToLogin");
-
-    const loginForm = document.getElementById("loginForm");
-    const signupForm = document.getElementById("signupForm");
 
     const loginFormElement = document.getElementById("loginFormElement");
     const signupFormElement = document.getElementById("signupFormElement");
 
-    // Safety check
-    if (!loginForm || !signupForm) {
-        console.error("Forms not found in HTML");
-        return;
-    }
-
     console.log("Setting up auth forms...");
     console.log("Sign up form element found:", signupFormElement);
     console.log("Login form element found:", loginFormElement);
-
-    // SHOW SIGNUP FORM
-    if (toggleToSignup) {
-        toggleToSignup.addEventListener("click", (e) => {
-            e.preventDefault();
-            loginForm.classList.add("hidden");
-            signupForm.classList.remove("hidden");
-        });
-    }
-
-    // SHOW LOGIN FORM
-    if (toggleToLogin) {
-        toggleToLogin.addEventListener("click", (e) => {
-            e.preventDefault();
-            signupForm.classList.add("hidden");
-            loginForm.classList.remove("hidden");
-        });
-    }
 
     // FORM EVENTS
     if (loginFormElement) {
@@ -198,7 +168,7 @@ async function getCurrentUser() {
 async function logoutUser() {
     await window.supabaseClient.auth.signOut();
     localStorage.removeItem("currentUser");
-    window.location.href = "auth.html";
+    window.location.href = "login.html";
 }
 
 // ================= CHECK USER ON PAGE LOAD =================
@@ -209,7 +179,7 @@ async function checkUserAndUpdateNav() {
     
     if (!navList) return;
 
-    const loginLink = navList.querySelector('li a[href="auth.html"]');
+    const loginLink = navList.querySelector('li a[href="login.html"]');
     
     if (user) {
         if (loginLink) {
@@ -222,8 +192,8 @@ async function checkUserAndUpdateNav() {
         }
     } else {
         if (loginLink) {
-            loginLink.textContent = "Login/Sign Up";
-            loginLink.href = "auth.html";
+            loginLink.textContent = "Login";
+            loginLink.href = "login.html";
             loginLink.onclick = null;
         }
     }
