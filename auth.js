@@ -80,6 +80,12 @@ async function handleSignup(e) {
         return showError(errorDiv, "Password must be at least 6 characters");
     }
 
+    // Check password strength
+    const strengthCheck = checkPasswordStrength(password);
+    if (!strengthCheck.isStrong) {
+        return showError(errorDiv, strengthCheck.message);
+    }
+
     if (password !== confirmPassword) {
         return showError(errorDiv, "Passwords do not match");
     }
@@ -155,6 +161,35 @@ async function handleLogin(e) {
 function showError(div, message) {
     div.style.color = "red";
     div.textContent = message;
+}
+
+function checkPasswordStrength(password) {
+    let strength = 0;
+    let feedback = [];
+
+    if (password.length >= 8) strength++;
+    else feedback.push("at least 8 characters");
+
+    if (/[A-Z]/.test(password)) strength++;
+    else feedback.push("an uppercase letter");
+
+    if (/[a-z]/.test(password)) strength++;
+    else feedback.push("a lowercase letter");
+
+    if (/[0-9]/.test(password)) strength++;
+    else feedback.push("a number");
+
+    if (/[!@#$%^&*]/.test(password)) strength++;
+    else feedback.push("a special character (!@#$%^&*)");
+
+    if (strength < 3) {
+        return {
+            isStrong: false,
+            message: "Password is too weak. Please include: " + feedback.join(", ")
+        };
+    }
+
+    return { isStrong: true, message: "Password is strong" };
 }
 
 
