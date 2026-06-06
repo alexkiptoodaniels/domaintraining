@@ -91,7 +91,6 @@ function setupAuthForms() {
 async function handleSignup(e) {
     e.preventDefault();
     
-    alert("Sign up button clicked!");
     console.log("Sign up form submitted");
 
     const name = document.getElementById("signupName").value.trim();
@@ -135,29 +134,14 @@ async function handleSignup(e) {
 
         console.log("Sign up successful:", data);
         
-        // Now insert user data into users table
         if (data.user) {
-            const { error: insertError } = await window.supabaseClient
-                .from('users')
-                .insert({
-                    id: data.user.id,
-                    email: email,
-                    full_name: name
-                });
-            
-            if (insertError) {
-                console.error("Error saving user profile:", insertError);
-                showError(errorDiv, "Account created but profile save failed: " + insertError.message);
-            } else {
-                console.log("User profile saved successfully");
-                errorDiv.style.color = "green";
-                errorDiv.textContent = "Account created! Redirecting...";
+            errorDiv.style.color = "green";
+            errorDiv.textContent = "Account created! Redirecting...";
 
-                setTimeout(() => {
-                    localStorage.setItem("currentUser", JSON.stringify(data.user));
-                    window.location.href = "index.html";
-                }, 2000);
-            }
+            setTimeout(() => {
+                localStorage.setItem("currentUser", JSON.stringify(data.user));
+                window.location.href = "index.html";
+            }, 2000);
         }
     } catch (err) {
         console.error("Unexpected error:", err);
