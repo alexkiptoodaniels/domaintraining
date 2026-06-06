@@ -95,7 +95,6 @@ async function handleSignup(e) {
     console.log("Sign up form submitted");
 
     const name = document.getElementById("signupName").value.trim();
-    const phone = document.getElementById("signupPhone").value.trim();
     const email = document.getElementById("signupEmail").value.trim();
     const password = document.getElementById("signupPassword").value;
     const confirmPassword = document.getElementById("signupConfirmPassword").value;
@@ -103,7 +102,7 @@ async function handleSignup(e) {
 
     errorDiv.textContent = "";
 
-    if (!name || !phone || !email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword) {
         console.log("Form validation failed");
         return showError(errorDiv, "Please fill in all fields");
     }
@@ -116,7 +115,7 @@ async function handleSignup(e) {
         return showError(errorDiv, "Passwords do not match");
     }
 
-    console.log("Attempting to sign up:", { email, name, phone });
+    console.log("Attempting to sign up:", { email, name });
 
     try {
         const { data, error } = await window.supabaseClient.auth.signUp({
@@ -143,8 +142,7 @@ async function handleSignup(e) {
                 .insert({
                     id: data.user.id,
                     email: email,
-                    full_name: name,
-                    phone_number: phone
+                    full_name: name
                 });
             
             if (insertError) {

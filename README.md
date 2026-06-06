@@ -87,16 +87,17 @@ CREATE INDEX idx_inventory_product_name ON inventory(product_name);
 ### June 6, 2026
 **Features Added:**
 - ✅ Integrated Supabase authentication (sign up & login)
-- ✅ Added phone number field to sign-up form
-- ✅ Store phone number in user profile during registration
 - ✅ Auto-logout functionality with Logout button in navbar
 - ✅ Dynamic navbar: "Login/Sign Up" converts to "Logout" when user is authenticated
 - ✅ User session persistence using localStorage
 - ✅ Added SQL database schema with Row Level Security (RLS)
-- ✅ Database schema includes phone_number field in users table
 - ✅ Created comprehensive Supabase setup guide with SQL queries
 
+**Features Removed:**
+- ❌ Removed phone number field from sign-up form (causing database errors)
+- ❌ Removed phone_number storage from user profile
+
 **Files Modified:**
-- `auth.html` - Added phone number input field to sign-up form
-- `auth.js` - Enhanced with user authentication check and dynamic navbar updates
-- `README.md` - Added Supabase database setup queries and changelog
+- `auth.html` - Removed phone number input field from sign-up form
+- `auth.js` - Removed phone number validation and database insert logic
+- `README.md` - Updated database schema and changelog
