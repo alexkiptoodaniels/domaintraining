@@ -39,7 +39,10 @@ CREATE TABLE inventory (
 );
 ```
 
-### 3. Enable Row Level Security (RLS)
+### 3. Enable Row Level Security (RLS) - OPTIONAL
+**⚠️ IMPORTANT:** Do NOT enable RLS until after users can sign up. RLS policies can block signup if not configured correctly.
+
+If you need RLS, use these policies:
 ```sql
 -- Enable RLS on users table
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;

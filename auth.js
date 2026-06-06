@@ -90,6 +90,8 @@ function setupAuthForms() {
 
 async function handleSignup(e) {
     e.preventDefault();
+    
+    alert("Sign up button clicked!");
     console.log("Sign up form submitted");
 
     const name = document.getElementById("signupName").value.trim();
@@ -116,30 +118,35 @@ async function handleSignup(e) {
 
     console.log("Attempting to sign up:", { email, name, phone });
 
-    const { data, error } = await window.supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-            data: {
-                full_name: name,
-                phone_number: phone
+    try {
+        const { data, error } = await window.supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    full_name: name,
+                    phone_number: phone
+                }
             }
+        });
+
+        if (error) {
+            console.error("Sign up error:", error);
+            return showError(errorDiv, "Error: " + error.message);
         }
-    });
 
-    if (error) {
-        console.error("Sign up error:", error);
-        return showError(errorDiv, error.message);
+        console.log("Sign up successful:", data);
+        errorDiv.style.color = "green";
+        errorDiv.textContent = "Account created! Redirecting...";
+
+        setTimeout(() => {
+            localStorage.setItem("currentUser", JSON.stringify(data.user));
+            window.location.href = "index.html";
+        }, 2000);
+    } catch (err) {
+        console.error("Unexpected error:", err);
+        showError(errorDiv, "Unexpected error: " + err.message);
     }
-
-    console.log("Sign up successful:", data);
-    errorDiv.style.color = "green";
-    errorDiv.textContent = "Account created! Redirecting...";
-
-    setTimeout(() => {
-        localStorage.setItem("currentUser", JSON.stringify(data.user));
-        window.location.href = "index.html";
-    }, 2000);
 }
 
 
