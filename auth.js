@@ -82,6 +82,7 @@ async function handleSignup(e) {
     e.preventDefault();
 
     const name = document.getElementById("signupName").value.trim();
+    const phone = document.getElementById("signupPhone").value.trim();
     const email = document.getElementById("signupEmail").value.trim();
     const password = document.getElementById("signupPassword").value;
     const confirmPassword = document.getElementById("signupConfirmPassword").value;
@@ -89,7 +90,7 @@ async function handleSignup(e) {
 
     errorDiv.textContent = "";
 
-    if (!name || !email || !password || !confirmPassword) {
+    if (!name || !phone || !email || !password || !confirmPassword) {
         return showError(errorDiv, "Please fill in all fields");
     }
 
@@ -106,7 +107,8 @@ async function handleSignup(e) {
         password,
         options: {
             data: {
-                full_name: name
+                full_name: name,
+                phone_number: phone
             }
         }
     });
@@ -119,8 +121,7 @@ async function handleSignup(e) {
     errorDiv.textContent = "Account created! Check email (if confirmation enabled).";
 
     setTimeout(() => {
-        signupForm.classList.add("hidden");
-        loginForm.classList.remove("hidden");
+        window.location.href = "index.html";
     }, 2000);
 }
 
@@ -175,3 +176,34 @@ async function logoutUser() {
     localStorage.removeItem("currentUser");
     window.location.href = "auth.html";
 }
+
+// ================= CHECK USER ON PAGE LOAD =================
+
+async function checkUserAndUpdateNav() {
+    const user = await getCurrentUser();
+    const navList = document.querySelector('nav ul');
+    
+    if (!navList) return;
+
+    const loginLink = navList.querySelector('li a[href="auth.html"]');
+    
+    if (user) {
+        if (loginLink) {
+            loginLink.textContent = "Logout";
+            loginLink.href = "#";
+            loginLink.onclick = (e) => {
+                e.preventDefault();
+                logoutUser();
+            };
+        }
+    } else {
+        if (loginLink) {
+            loginLink.textContent = "Login/Sign Up";
+            loginLink.href = "auth.html";
+            loginLink.onclick = null;
+        }
+    }
+}
+
+// Call on page load
+document.addEventListener("DOMContentLoaded", checkUserAndUpdateNav);

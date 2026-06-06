@@ -18,6 +18,7 @@ CREATE TABLE users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL UNIQUE,
   full_name VARCHAR(255),
+  phone_number VARCHAR(20),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -77,3 +78,22 @@ CREATE INDEX idx_inventory_product_name ON inventory(product_name);
 - Copy and paste each SQL block into your Supabase SQL Editor
 - Execute them in order (tables first, then RLS policies)
 - Replace placeholder values as needed
+
+## Changelog
+
+### June 6, 2026
+**Features Added:**
+- ✅ Integrated Supabase authentication (sign up & login)
+- ✅ Added phone number field to sign-up form
+- ✅ Store phone number in user profile during registration
+- ✅ Auto-logout functionality with Logout button in navbar
+- ✅ Dynamic navbar: "Login/Sign Up" converts to "Logout" when user is authenticated
+- ✅ User session persistence using localStorage
+- ✅ Added SQL database schema with Row Level Security (RLS)
+- ✅ Database schema includes phone_number field in users table
+- ✅ Created comprehensive Supabase setup guide with SQL queries
+
+**Files Modified:**
+- `auth.html` - Added phone number input field to sign-up form
+- `auth.js` - Enhanced with user authentication check and dynamic navbar updates
+- `README.md` - Added Supabase database setup queries and changelog
