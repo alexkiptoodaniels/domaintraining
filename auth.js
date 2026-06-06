@@ -124,8 +124,7 @@ async function handleSignup(e) {
             password,
             options: {
                 data: {
-                    full_name: name,
-                    phone_number: phone
+                    full_name: name
                 }
             }
         });
@@ -136,13 +135,32 @@ async function handleSignup(e) {
         }
 
         console.log("Sign up successful:", data);
-        errorDiv.style.color = "green";
-        errorDiv.textContent = "Account created! Redirecting...";
+        
+        // Now insert user data into users table
+        if (data.user) {
+            const { error: insertError } = await window.supabaseClient
+                .from('users')
+                .insert({
+                    id: data.user.id,
+                    email: email,
+                    full_name: name,
+                    phone_number: phone
+                });
+            
+            if (insertError) {
+                console.error("Error saving user profile:", insertError);
+                showError(errorDiv, "Account created but profile save failed: " + insertError.message);
+            } else {
+                console.log("User profile saved successfully");
+                errorDiv.style.color = "green";
+                errorDiv.textContent = "Account created! Redirecting...";
 
-        setTimeout(() => {
-            localStorage.setItem("currentUser", JSON.stringify(data.user));
-            window.location.href = "index.html";
-        }, 2000);
+                setTimeout(() => {
+                    localStorage.setItem("currentUser", JSON.stringify(data.user));
+                    window.location.href = "index.html";
+                }, 2000);
+            }
+        }
     } catch (err) {
         console.error("Unexpected error:", err);
         showError(errorDiv, "Unexpected error: " + err.message);
