@@ -11,8 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Create Supabase client safely
-    const supabaseUrl = "YOUR_SUPABASE_URL";
-    const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
+    const supabaseUrl = "https://xvqqqdibtbfgfkgveezm.supabase.co";
+    const supabaseKey = "sb_publishable_NV2iGz-DCLOWD6wkm3UwOw_vlMpi8zi";
 
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 

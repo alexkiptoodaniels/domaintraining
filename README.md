@@ -1,9 +1,79 @@
 # domaintraining stockease
-function
--manage user inventory
--user able to add and remove inventory at will 
--in the inventory listing user should be able to filter out the product listed below by typing(name/id) or alphabetical 
--inventory should have the followind details name,productid,price,no available 
--the inventory should have a way of idendifying if the products available alow on stock or not
 
--sign up and login fetches and stores data in db table 
+## Features
+- Manage user inventory
+- Add and remove inventory items
+- Filter products by name/ID or alphabetically
+- Track inventory details: name, product ID, price, quantity available
+- Low stock alerts
+- User authentication with sign up and login
+
+## Supabase Database Setup
+
+Run these SQL queries in your Supabase SQL editor to create the necessary tables:
+
+### 1. Users Table (for storing user profiles)
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  full_name VARCHAR(255),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 2. Inventory Table (for storing products)
+```sql
+CREATE TABLE inventory (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product_name VARCHAR(255) NOT NULL,
+  product_id VARCHAR(100) NOT NULL,
+  price DECIMAL(10, 2) NOT NULL,
+  quantity_available INTEGER NOT NULL DEFAULT 0,
+  low_stock_threshold INTEGER DEFAULT 10,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 3. Enable Row Level Security (RLS)
+```sql
+-- Enable RLS on users table
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+-- Enable RLS on inventory table
+ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can only read their own profile
+CREATE POLICY "Users can read own profile" ON users
+  FOR SELECT USING (auth.uid() = id);
+
+-- Policy: Users can only read their own inventory
+CREATE POLICY "Users can read own inventory" ON inventory
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Policy: Users can insert their own inventory
+CREATE POLICY "Users can insert own inventory" ON inventory
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Policy: Users can update their own inventory
+CREATE POLICY "Users can update own inventory" ON inventory
+  FOR UPDATE USING (auth.uid() = user_id);
+
+-- Policy: Users can delete their own inventory
+CREATE POLICY "Users can delete own inventory" ON inventory
+  FOR DELETE USING (auth.uid() = user_id);
+```
+
+### 4. Create Index for Better Performance
+```sql
+CREATE INDEX idx_inventory_user_id ON inventory(user_id);
+CREATE INDEX idx_inventory_product_name ON inventory(product_name);
+```
+
+## Notes
+- Copy and paste each SQL block into your Supabase SQL Editor
+- Execute them in order (tables first, then RLS policies)
+- Replace placeholder values as needed
