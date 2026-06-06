@@ -47,6 +47,10 @@ function setupAuthForms() {
         return;
     }
 
+    console.log("Setting up auth forms...");
+    console.log("Sign up form element found:", signupFormElement);
+    console.log("Login form element found:", loginFormElement);
+
     // SHOW SIGNUP FORM
     if (toggleToSignup) {
         toggleToSignup.addEventListener("click", (e) => {
@@ -67,11 +71,17 @@ function setupAuthForms() {
 
     // FORM EVENTS
     if (loginFormElement) {
-        loginFormElement.addEventListener("submit", handleLogin);
+        loginFormElement.addEventListener("submit", (e) => {
+            console.log("Login form submitted");
+            handleLogin(e);
+        });
     }
 
     if (signupFormElement) {
-        signupFormElement.addEventListener("submit", handleSignup);
+        signupFormElement.addEventListener("submit", (e) => {
+            console.log("Signup form submitted - event triggered");
+            handleSignup(e);
+        });
     }
 }
 
@@ -80,6 +90,7 @@ function setupAuthForms() {
 
 async function handleSignup(e) {
     e.preventDefault();
+    console.log("Sign up form submitted");
 
     const name = document.getElementById("signupName").value.trim();
     const phone = document.getElementById("signupPhone").value.trim();
@@ -91,6 +102,7 @@ async function handleSignup(e) {
     errorDiv.textContent = "";
 
     if (!name || !phone || !email || !password || !confirmPassword) {
+        console.log("Form validation failed");
         return showError(errorDiv, "Please fill in all fields");
     }
 
@@ -101,6 +113,8 @@ async function handleSignup(e) {
     if (password !== confirmPassword) {
         return showError(errorDiv, "Passwords do not match");
     }
+
+    console.log("Attempting to sign up:", { email, name, phone });
 
     const { data, error } = await window.supabaseClient.auth.signUp({
         email,
@@ -114,13 +128,16 @@ async function handleSignup(e) {
     });
 
     if (error) {
+        console.error("Sign up error:", error);
         return showError(errorDiv, error.message);
     }
 
+    console.log("Sign up successful:", data);
     errorDiv.style.color = "green";
-    errorDiv.textContent = "Account created! Check email (if confirmation enabled).";
+    errorDiv.textContent = "Account created! Redirecting...";
 
     setTimeout(() => {
+        localStorage.setItem("currentUser", JSON.stringify(data.user));
         window.location.href = "index.html";
     }, 2000);
 }
