@@ -1,26 +1,74 @@
 // Product Data Store
-let products = [
-    { id: 1, name: 'MacBook Pro 14"', productId: 'MBPRO14', stock: 8, price: 1999 },
-    { id: 2, name: 'Dell XPS 15', productId: 'DXPS15', stock: 12, price: 1899 },
-    { id: 3, name: 'Lenovo ThinkPad X1', productId: 'LTP-X1', stock: 3, price: 1299 },
-    { id: 4, name: 'ASUS ROG Gaming', productId: 'ASUS-ROG', stock: 6, price: 2199 },
-    { id: 5, name: 'HP Pavilion 15', productId: 'HP-PAV15', stock: 15, price: 699 }
-];
+let products = [];
 
-let nextId = 6;
+let nextId = 1;
 let currentEditId = null;
 let isSorted = false;
+let currentUser = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     initializeTheme();
-    renderTable();
-    updateStats();
     setupModalListeners();
     setupFormListeners();
     setupSearch();
     setupActiveNav();
+    loadUserAndProducts();
 });
+
+// Load current user and products from database
+async function loadUserAndProducts() {
+    try {
+        // Get current user
+        if (window.supabaseClient) {
+            const { data } = await window.supabaseClient.auth.getUser();
+            currentUser = data.user;
+            
+            if (currentUser) {
+                await loadProductsFromDB();
+            } else {
+                console.log("No user logged in");
+                renderTable();
+                updateStats();
+            }
+        }
+    } catch (error) {
+        console.error("Error loading user and products:", error);
+        renderTable();
+        updateStats();
+    }
+}
+
+// Load products from Supabase database
+async function loadProductsFromDB() {
+    try {
+        if (!window.supabaseClient || !currentUser) return;
+
+        const { data, error } = await window.supabaseClient
+            .from('inventory')
+            .select('*')
+            .eq('user_id', currentUser.id);
+
+        if (error) {
+            console.error("Error loading products:", error);
+            return;
+        }
+
+        // Transform database format to app format
+        products = data.map(item => ({
+            id: item.id,
+            name: item.product_name,
+            productId: item.product_id,
+            price: item.price,
+            stock: item.quantity_available
+        }));
+
+        renderTable();
+        updateStats();
+    } catch (error) {
+        console.error("Unexpected error loading products:", error);
+    }
+}
 
 // ============ THEME MANAGEMENT ============
 function initializeTheme() {
@@ -237,7 +285,7 @@ function setupFormListeners() {
     }
 }
 
-function handleAddProduct() {
+async function handleAddProduct() {
     const form = document.getElementById('addProductForm');
     const name = form.elements['productName'].value.trim();
     const productId = form.elements['productId'].value.trim();
@@ -259,18 +307,48 @@ function handleAddProduct() {
         return;
     }
 
-    products.push({
-        id: nextId++,
-        name,
-        productId,
-        price,
-        stock
-    });
+    if (!currentUser) {
+        alert('Please log in to add products');
+        return;
+    }
 
-    renderTable();
-    updateStats();
-    closeModal('addProductModal');
-    form.reset();
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('inventory')
+            .insert([{
+                user_id: currentUser.id,
+                product_name: name,
+                product_id: productId,
+                price: price,
+                quantity_available: stock
+            }])
+            .select();
+
+        if (error) {
+            console.error("Error adding product:", error);
+            alert('Error adding product: ' + error.message);
+            return;
+        }
+
+        // Add to local array
+        if (data && data[0]) {
+            products.push({
+                id: data[0].id,
+                name: data[0].product_name,
+                productId: data[0].product_id,
+                price: data[0].price,
+                stock: data[0].quantity_available
+            });
+        }
+
+        renderTable();
+        updateStats();
+        closeModal('addProductModal');
+        form.reset();
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        alert('Unexpected error: ' + error.message);
+    }
 }
 
 function openEditModal(productId) {
@@ -287,7 +365,7 @@ function openEditModal(productId) {
     openModal('editProductModal');
 }
 
-function handleEditProduct() {
+async function handleEditProduct() {
     const form = document.getElementById('editProductForm');
     const name = form.elements['productName'].value.trim();
     const productId = form.elements['productId'].value.trim();
@@ -309,18 +387,40 @@ function handleEditProduct() {
         return;
     }
 
-    const product = products.find(p => p.id === currentEditId);
-    if (product) {
-        product.name = name;
-        product.productId = productId;
-        product.price = price;
-        product.stock = stock;
-    }
+    try {
+        const { error } = await window.supabaseClient
+            .from('inventory')
+            .update({
+                product_name: name,
+                product_id: productId,
+                price: price,
+                quantity_available: stock
+            })
+            .eq('id', currentEditId);
 
-    renderTable();
-    updateStats();
-    closeModal('editProductModal');
-    form.reset();
+        if (error) {
+            console.error("Error updating product:", error);
+            alert('Error updating product: ' + error.message);
+            return;
+        }
+
+        // Update local array
+        const product = products.find(p => p.id === currentEditId);
+        if (product) {
+            product.name = name;
+            product.productId = productId;
+            product.price = price;
+            product.stock = stock;
+        }
+
+        renderTable();
+        updateStats();
+        closeModal('editProductModal');
+        form.reset();
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        alert('Unexpected error: ' + error.message);
+    }
 }
 
 function showDeleteConfirm(productId) {
@@ -328,12 +428,28 @@ function showDeleteConfirm(productId) {
     openModal('deleteModal');
 }
 
-function handleDeleteProduct() {
-    products = products.filter(p => p.id !== currentEditId);
-    renderTable();
-    updateStats();
-    closeModal('deleteModal');
-    currentEditId = null;
+async function handleDeleteProduct() {
+    try {
+        const { error } = await window.supabaseClient
+            .from('inventory')
+            .delete()
+            .eq('id', currentEditId);
+
+        if (error) {
+            console.error("Error deleting product:", error);
+            alert('Error deleting product: ' + error.message);
+            return;
+        }
+
+        products = products.filter(p => p.id !== currentEditId);
+        renderTable();
+        updateStats();
+        closeModal('deleteModal');
+        currentEditId = null;
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        alert('Unexpected error: ' + error.message);
+    }
 }
 
 // ============ NAVIGATION ============

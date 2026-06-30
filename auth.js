@@ -116,7 +116,7 @@ async function handleSignup(e) {
 
             setTimeout(() => {
                 localStorage.setItem("currentUser", JSON.stringify(data.user));
-                window.location.href = "index.html";
+                window.location.href = "inventory.html";
             }, 2000);
         }
     } catch (err) {
@@ -152,7 +152,7 @@ async function handleLogin(e) {
 
     localStorage.setItem("currentUser", JSON.stringify(data.user));
 
-    window.location.href = "index.html";
+    window.location.href = "inventory.html";
 }
 
 
@@ -214,23 +214,39 @@ async function checkUserAndUpdateNav() {
     
     if (!navList) return;
 
-    const loginLink = navList.querySelector('li a[href="login.html"]');
+    // Find the login link
+    let loginLink = navList.querySelector('li a[href="login.html"]');
     
     if (user) {
-        if (loginLink) {
-            loginLink.textContent = "Logout";
+        if (!loginLink) {
+            // If login link doesn't exist, create it
+            const newLi = document.createElement('li');
+            const newLink = document.createElement('a');
+            newLink.textContent = "Log Out";
+            newLink.href = "#";
+            newLink.onclick = (e) => {
+                e.preventDefault();
+                logoutUser();
+            };
+            newLi.appendChild(newLink);
+            navList.appendChild(newLi);
+        } else {
+            // Update existing login link to logout
+            loginLink.textContent = "Log Out";
             loginLink.href = "#";
             loginLink.onclick = (e) => {
                 e.preventDefault();
                 logoutUser();
             };
         }
+        console.log("User logged in, logout button shown");
     } else {
         if (loginLink) {
-            loginLink.textContent = "Login";
+            loginLink.textContent = "Log In";
             loginLink.href = "login.html";
             loginLink.onclick = null;
         }
+        console.log("User logged out, login button shown");
     }
 }
 
