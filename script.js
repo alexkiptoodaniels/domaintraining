@@ -28,6 +28,12 @@ async function loadUserAndProducts() {
                 await loadProductsFromDB();
             } else {
                 console.log("No user logged in");
+                // Redirect to login if on inventory page
+                if (window.location.pathname.includes('inventory.html')) {
+                    alert('Please log in to access your inventory');
+                    window.location.href = 'login.html';
+                    return;
+                }
                 renderTable();
                 updateStats();
             }

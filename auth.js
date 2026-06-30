@@ -214,12 +214,20 @@ async function checkUserAndUpdateNav() {
     
     if (!navList) return;
 
+    // Find the inventory list item
+    let inventoryItem = navList.querySelector('li.inventory-nav-item');
+    
     // Find the login link
     let loginLink = navList.querySelector('li a[href="login.html"]');
     
     if (user) {
+        // User is logged in - show inventory, hide login
+        if (inventoryItem) {
+            inventoryItem.style.display = 'block';
+        }
+        
         if (!loginLink) {
-            // If login link doesn't exist, create it
+            // If login link doesn't exist, create logout link
             const newLi = document.createElement('li');
             const newLink = document.createElement('a');
             newLink.textContent = "Log Out";
@@ -239,14 +247,19 @@ async function checkUserAndUpdateNav() {
                 logoutUser();
             };
         }
-        console.log("User logged in, logout button shown");
+        console.log("User logged in - inventory shown, logout button shown");
     } else {
+        // User is logged out - hide inventory, show login
+        if (inventoryItem) {
+            inventoryItem.style.display = 'none';
+        }
+        
         if (loginLink) {
             loginLink.textContent = "Log In";
             loginLink.href = "login.html";
             loginLink.onclick = null;
         }
-        console.log("User logged out, login button shown");
+        console.log("User logged out - inventory hidden, login button shown");
     }
 }
 
