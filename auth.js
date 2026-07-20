@@ -1,15 +1,18 @@
 // ================= SAFE INIT =================
 
-document.addEventListener("DOMContentLoaded", () => {
+// IMPORTANT: This runs immediately as the script loads (top-level), NOT inside
+// a DOMContentLoaded listener. script.js also listens for DOMContentLoaded and
+// needs window.supabaseClient to already exist by the time it runs. Since
+// script tags execute in order as the page parses (before DOMContentLoaded
+// fires), creating the client here guarantees it's ready in time, regardless
+// of which file's DOMContentLoaded handler fires first.
 
-    console.log("AUTH JS LOADED");
+console.log("AUTH JS LOADED");
 
-    // Check Supabase loaded
-    if (!window.supabase) {
-        console.error("Supabase not loaded. Check script order in HTML.");
-        return;
-    }
-
+// Check Supabase loaded
+if (!window.supabase) {
+    console.error("Supabase not loaded. Check script order in HTML.");
+} else {
     // Create Supabase client safely
     // NOTE: replace these with your actual project URL and anon/publishable key
     // from Supabase Dashboard -> Settings -> API
@@ -19,18 +22,20 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // expose globally so functions can use it
+        // expose globally so functions can use it (available before DOMContentLoaded fires)
         window.supabaseClient = supabase;
-
-        // Theme (safe check)
-        if (typeof initializeTheme === "function") {
-            initializeTheme();
-        }
-
-        setupAuthForms();
     } catch (err) {
         console.error("Failed to initialize Supabase client. Check supabaseUrl/supabaseKey in auth.js:", err);
     }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Theme (safe check)
+    if (typeof initializeTheme === "function") {
+        initializeTheme();
+    }
+
+    setupAuthForms();
 });
 
 
