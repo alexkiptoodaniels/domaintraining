@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Create Supabase client safely
     // NOTE: replace these with your actual project URL and anon/publishable key
     // from Supabase Dashboard -> Settings -> API
-    const supabaseUrl = "https://aywujanlhafdqcocyuex.supabase.co/rest/v1/";
+    const supabaseUrl = "https://aywujanlhafdqcocyuex.supabase.co";
     const supabaseKey = "sb_publishable_jq0S9xtfWrfxFNYNybUSwQ_4FR1T7dd";
 
     try {
