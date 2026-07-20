@@ -138,14 +138,16 @@ function renderTable(productsToRender = products) {
 function attachTableListeners() {
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const id = parseInt(e.target.dataset.id);
+            // product ids are UUID strings from Supabase, not integers -
+            // parseInt would mangle them, so use the raw string id
+            const id = e.target.dataset.id;
             openEditModal(id);
         });
     });
 
     document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const id = parseInt(e.target.dataset.id);
+            const id = e.target.dataset.id;
             showDeleteConfirm(id);
         });
     });
