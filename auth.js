@@ -11,20 +11,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Create Supabase client safely
+    // NOTE: replace these with your actual project URL and anon/publishable key
+    // from Supabase Dashboard -> Settings -> API
     const supabaseUrl = "https://aywujanlhafdqcocyuex.supabase.co/rest/v1/";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5d3VqYW5saGFmZHFjb2N5dWV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MzYyNTIsImV4cCI6MjA5NTMxMjI1Mn0.QWLUq6iRuXvTdujW3EDtF6uZKju5-kEoO1zNVbQMq-Y";
+    const supabaseKey = "sb_publishable_jq0S9xtfWrfxFNYNybUSwQ_4FR1T7dd";
 
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    try {
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    // expose globally so functions can use it
-    window.supabaseClient = supabase;
+        // expose globally so functions can use it
+        window.supabaseClient = supabase;
 
-    // Theme (safe check)
-    if (typeof initializeTheme === "function") {
-        initializeTheme();
+        // Theme (safe check)
+        if (typeof initializeTheme === "function") {
+            initializeTheme();
+        }
+
+        setupAuthForms();
+    } catch (err) {
+        console.error("Failed to initialize Supabase client. Check supabaseUrl/supabaseKey in auth.js:", err);
     }
-
-    setupAuthForms();
 });
 
 
@@ -196,12 +202,18 @@ function checkPasswordStrength(password) {
 // ================= HELPERS =================
 
 async function getCurrentUser() {
+    if (!window.supabaseClient) {
+        console.warn("Supabase client not initialized yet.");
+        return null;
+    }
     const { data } = await window.supabaseClient.auth.getUser();
     return data.user;
 }
 
 async function logoutUser() {
-    await window.supabaseClient.auth.signOut();
+    if (window.supabaseClient) {
+        await window.supabaseClient.auth.signOut();
+    }
     localStorage.removeItem("currentUser");
     window.location.href = "login.html";
 }
