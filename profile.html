@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Product Inventory System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav>
+        <div class="container">
+            <div class="logo">📦 Inventory System</div>
+            <div class="nav-right">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li class="inventory-nav-item"><a href="inventory.html">Inventory</a></li>
+                    <li class="profile-nav-item"><a href="profile.html" class="active">Profile</a></li>
+                    <li><a href="login.html">Login</a></li>
+                </ul>
+                <button class="theme-toggle" id="themeToggle">☀️ Light Mode</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-form" id="profileCard">
+                <h2>My Profile</h2>
+
+                <p id="profileLoading">Loading your profile...</p>
+
+                <div id="profileContent" style="display: none;">
+                    <div class="form-group">
+                        <label for="profileLoginId">Login ID</label>
+                        <input type="text" id="profileLoginId" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="profileName">Full Name</label>
+                        <input type="text" id="profileName" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="profileEmail">Email</label>
+                        <input type="text" id="profileEmail" readonly>
+                    </div>
+                </div>
+
+                <div id="profileError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Inventory System. All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>

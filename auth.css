@@ -81,6 +81,16 @@
     opacity: 0.5;
 }
 
+.form-group input[readonly] {
+    opacity: 0.75;
+    cursor: default;
+}
+
+.form-group input[readonly]:focus {
+    box-shadow: none;
+    border-color: var(--border);
+}
+
 .btn-submit {
     padding: 0.9rem;
     border: none;

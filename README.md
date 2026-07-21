@@ -148,6 +148,20 @@ CREATE INDEX idx_inventory_product_name ON inventory(product_name);
 
 ## Changelog
 
+### July 21, 2026 — Specific duplicate-account messages + profile page
+**Features Added:**
+- ✅ New `profile.html` page showing the logged-in user's Login ID, Full Name, and Email (pulled from existing signup data — no extra query needed)
+- ✅ Profile link added to the navbar, shown only when logged in; the page itself also redirects to `login.html` if visited without a session
+- ✅ Sign up now gives a specific error depending on what's already registered: "This email is already registered", "This phone number is already registered", etc., instead of one generic message
+
+**Known limitation (pre-existing, now more visible):** because Supabase creates the auth account (tied to the real email) *before* we can check phone-number uniqueness, a signup that fails at the phone-uniqueness step still leaves an unconfirmed `auth.users` row behind. If a user then retries with the same email, they'll see "This email is already registered" even though their first attempt never fully completed. If this happens during testing, delete the stray unconfirmed user in **Authentication → Users** in the Supabase dashboard, then retry.
+
+**Files Modified:**
+- `profile.html` - New page
+- `index.html`, `inventory.html` - Added Profile nav link
+- `auth.js` - Added `loadProfile()`, nav toggle for Profile link, and specific duplicate-account error messages
+- `auth.css` - Styling for read-only profile fields
+
 ### July 20, 2026 (later still) — Login with email, phone, OR login ID
 **Design change:** Brought real email back (it's needed as the actual Supabase Auth identity again) and added a lookup layer so login accepts any of the three identifiers.
 

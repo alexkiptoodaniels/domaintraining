@@ -138,6 +138,10 @@ async function handleSignup(e) {
 
         if (error) {
             console.error("Sign up error:", error);
+            const msg = (error.message || "").toLowerCase();
+            if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already")) {
+                return showError(errorDiv, "This email is already registered. Try logging in instead.");
+            }
             return showError(errorDiv, "Error: " + error.message);
         }
 
@@ -157,10 +161,24 @@ async function handleSignup(e) {
 
             if (lookupError) {
                 console.error("Error saving login lookup:", lookupError);
+
                 if (lookupError.code === "23505") {
-                    return showError(errorDiv, "This phone number is already registered to another account");
+                    // Inspect the constraint/message to say specifically what's
+                    // already taken, rather than a generic message.
+                    const detail = ((lookupError.message || "") + " " + (lookupError.details || "")).toLowerCase();
+
+                    if (detail.includes("phone_number")) {
+                        return showError(errorDiv, "This phone number is already registered to another account");
+                    }
+                    if (detail.includes("email")) {
+                        return showError(errorDiv, "This email is already registered to another account");
+                    }
+                    if (detail.includes("login_id")) {
+                        return showError(errorDiv, "That login ID was just taken — please try signing up again");
+                    }
+                    return showError(errorDiv, "Some of your details are already registered to another account");
                 }
-                console.error("Note: email duplicates are normally caught earlier by auth.signUp(); this branch is mainly for phone_number/login_id conflicts.");
+
                 return showError(errorDiv, "Account created, but we couldn't finish setup: " + lookupError.message);
             }
 
@@ -234,6 +252,37 @@ async function handleLogin(e) {
 }
 
 
+// ================= PROFILE PAGE =================
+
+async function loadProfile() {
+    const contentEl = document.getElementById("profileContent");
+
+    // Only run this on profile.html
+    if (!contentEl) return;
+
+    const loadingEl = document.getElementById("profileLoading");
+    const errorEl = document.getElementById("profileError");
+
+    const user = await getCurrentUser();
+
+    if (!user) {
+        alert("Please log in to view your profile");
+        window.location.href = "login.html";
+        return;
+    }
+
+    const meta = user.user_metadata || {};
+
+    document.getElementById("profileLoginId").value = meta.login_id || "—";
+    document.getElementById("profileName").value = meta.full_name || "—";
+    document.getElementById("profileEmail").value = user.email || "—";
+
+    if (loadingEl) loadingEl.style.display = "none";
+    contentEl.style.display = "block";
+}
+
+document.addEventListener("DOMContentLoaded", loadProfile);
+
 // ================= ERROR HANDLER =================
 
 function showError(div, message) {
@@ -298,14 +347,21 @@ async function checkUserAndUpdateNav() {
 
     // Find the inventory list item
     let inventoryItem = navList.querySelector('li.inventory-nav-item');
+
+    // Find the profile list item
+    let profileItem = navList.querySelector('li.profile-nav-item');
     
     // Find the login link
     let loginLink = navList.querySelector('li a[href="login.html"]');
     
     if (user) {
-        // User is logged in - show inventory, hide login
+        // User is logged in - show inventory & profile, hide login
         if (inventoryItem) {
             inventoryItem.style.display = 'block';
+        }
+
+        if (profileItem) {
+            profileItem.style.display = 'block';
         }
         
         if (!loginLink) {
@@ -331,9 +387,13 @@ async function checkUserAndUpdateNav() {
         }
         console.log("User logged in - inventory shown, logout button shown");
     } else {
-        // User is logged out - hide inventory, show login
+        // User is logged out - hide inventory & profile, show login
         if (inventoryItem) {
             inventoryItem.style.display = 'none';
+        }
+
+        if (profileItem) {
+            profileItem.style.display = 'none';
         }
         
         if (loginLink) {
