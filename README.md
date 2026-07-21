@@ -12,22 +12,94 @@
 
 Run these SQL queries in your Supabase SQL editor to create the necessary tables:
 
-### 1. Users Table (for storing user profiles)
+### 1. Sequential Login ID Support
+
+Users sign up with a real email (as before) and also get a short generated ID (e.g. `001`). At login, they can use **any of**: email, phone number, or login ID.
+
+Supabase Auth itself only ever signs in by real email under the hood — there's no native "sign in by arbitrary ID" support. So when someone logs in with a phone number or login ID, the app first resolves it to the account's real email (via the `get_login_email()` function below), then signs in normally with that email.
+
+Run this SQL to create the sequence and function that generates login IDs atomically (so two signups can never collide):
+
 ```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  full_name VARCHAR(255),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+-- Sequence for generating sequential login IDs
+CREATE SEQUENCE IF NOT EXISTS login_id_seq START 1;
+
+-- Function to atomically get the next login ID, zero-padded to 3 digits
+-- (e.g. 1 -> "001", 42 -> "042"; beyond 999 it naturally becomes 4 digits)
+CREATE OR REPLACE FUNCTION generate_login_id()
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  next_id INT;
+BEGIN
+  next_id := nextval('login_id_seq');
+  RETURN LPAD(next_id::TEXT, 3, '0');
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION generate_login_id() TO anon, authenticated;
 ```
 
-### 2. Inventory Table (for storing products)
+### 2. Login Lookup Table & Resolver Function
+
+A small lookup table maps phone number and login ID back to the account's real email — this is what makes "log in with phone or ID" possible. It's intentionally minimal (not a full profile table): just the fields needed to resolve an identifier.
+
+```sql
+CREATE TABLE IF NOT EXISTS login_lookup (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  phone_number VARCHAR(20) NOT NULL UNIQUE,
+  login_id TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE login_lookup ENABLE ROW LEVEL SECURITY;
+
+-- Open insert policy: signup calls this right after auth.signUp(), which may
+-- not yet have an active session if "Confirm email" is enabled in your
+-- Supabase project (no session exists until the user clicks the confirmation
+-- link). Restricting this to auth.uid() = id would break signup in that case.
+-- The row still can't be spoofed usefully: id must reference a real
+-- auth.users row (FK), and email/phone/login_id are all UNIQUE.
+CREATE POLICY "Anyone can insert a lookup row" ON login_lookup
+  FOR INSERT WITH CHECK (true);
+```
+
+The resolver function is `SECURITY DEFINER`, so it can read the table server-side without needing a public SELECT policy (which would otherwise let anyone enumerate phone numbers / emails by querying the table directly):
+
+```sql
+CREATE OR REPLACE FUNCTION get_login_email(identifier TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  found_email TEXT;
+BEGIN
+  SELECT email INTO found_email
+  FROM login_lookup
+  WHERE phone_number = identifier OR login_id = identifier
+  LIMIT 1;
+
+  RETURN found_email;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_login_email(TEXT) TO anon, authenticated;
+```
+
+**If you already ran the earlier `phone_reservations` table SQL from before this change**, drop it — it's replaced by `login_lookup`:
+```sql
+DROP TABLE IF EXISTS phone_reservations;
+```
+
+### 3. Inventory Table (for storing products)
 ```sql
 CREATE TABLE inventory (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   product_name VARCHAR(255) NOT NULL,
   product_id VARCHAR(100) NOT NULL,
   price DECIMAL(10, 2) NOT NULL,
@@ -38,20 +110,13 @@ CREATE TABLE inventory (
 );
 ```
 
-### 3. Enable Row Level Security (RLS) - OPTIONAL
+### 4. Enable Row Level Security (RLS) - OPTIONAL
 **⚠️ IMPORTANT:** Do NOT enable RLS until after users can sign up. RLS policies can block signup if not configured correctly.
 
 If you need RLS, use these policies:
 ```sql
--- Enable RLS on users table
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-
 -- Enable RLS on inventory table
 ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
-
--- Policy: Users can only read their own profile
-CREATE POLICY "Users can read own profile" ON users
-  FOR SELECT USING (auth.uid() = id);
 
 -- Policy: Users can only read their own inventory
 CREATE POLICY "Users can read own inventory" ON inventory
@@ -70,7 +135,7 @@ CREATE POLICY "Users can delete own inventory" ON inventory
   FOR DELETE USING (auth.uid() = user_id);
 ```
 
-### 4. Create Index for Better Performance
+### 5. Create Index for Better Performance
 ```sql
 CREATE INDEX idx_inventory_user_id ON inventory(user_id);
 CREATE INDEX idx_inventory_product_name ON inventory(product_name);
@@ -82,6 +147,52 @@ CREATE INDEX idx_inventory_product_name ON inventory(product_name);
 - Replace placeholder values as needed
 
 ## Changelog
+
+### July 20, 2026 (later still) — Login with email, phone, OR login ID
+**Design change:** Brought real email back (it's needed as the actual Supabase Auth identity again) and added a lookup layer so login accepts any of the three identifiers.
+
+**Features Added:**
+- ✅ Sign up collects name, email, phone, and password again; a sequential login ID (e.g. `001`) is still generated automatically
+- ✅ The actual Supabase Auth account uses the **real email** this time — no more synthetic `@stockease.local` address, so Supabase's normal email confirmation works as intended if you have it enabled
+- ✅ A `login_lookup` table maps phone number and login ID to the account's email
+- ✅ Login accepts email, phone, or login ID in a single field — non-email input is resolved to the real email via the `get_login_email()` DB function before signing in
+- ✅ Error messages for a failed lookup don't reveal whether the account exists
+
+**Dashboard setting is now optional, not required:** since the real email is used for auth, you can leave "Confirm email" on or off depending on whether you want email verification — either works. Leaving it off gives the smoothest experience (user is logged in immediately after signup); leaving it on means they must click the confirmation link before their first login.
+
+**Files Modified:**
+- `login.html` - Single field now accepts email, phone, or login ID
+- `signup.html` - Email field restored alongside name, phone, password (unchanged from two changes ago)
+- `auth.js` - Signup now creates the account with the real email and writes a `login_lookup` row; login detects `@` to decide whether to sign in directly or resolve via `get_login_email()` first
+- `README.md` - Replaced `phone_reservations` with `login_lookup` + `get_login_email()`, fixed its RLS insert policy, updated changelog
+
+### July 20, 2026 (earlier) — Sequential Login ID with synthetic email (superseded above)
+**Design change:** Replaced the `users` profile table approach (below) with a table-free design, per updated requirements.
+
+**Features Added:**
+- ✅ Users now log in with a short sequential ID (e.g. `001`) instead of email
+- ✅ Login ID generated atomically via a Postgres `SEQUENCE` + `generate_login_id()` function — no profile table needed
+- ✅ Phone number uniqueness now enforced via a minimal `phone_reservations` table (just a primary key column) instead of a full profile table
+- ✅ Real email field removed from sign up entirely; a synthetic, never-emailed address (`<id>@stockease.local`) is used internally to satisfy Supabase Auth's requirement for an email
+
+**Files Modified:**
+- `login.html` - Email field replaced with a "Login ID" field
+- `signup.html` - Real email field removed (kept name, phone, password)
+- `auth.js` - Rewrote signup/login to generate and use login IDs and synthetic emails; phone uniqueness now checked against `phone_reservations`
+- `README.md` - Replaced `users` table schema with sequence/function + `phone_reservations`, updated RLS section, updated inventory table's foreign key to reference `auth.users` directly
+
+### July 20, 2026 — Added phone number to sign up (superseded above)
+**Features Added:**
+- ✅ Phone number field on sign up, required and enforced unique
+- ✅ `phone_number` column added to `users` table with a UNIQUE constraint
+- ✅ Sign up now writes a profile row to `users` (id, email, full_name, phone_number) after the auth account is created
+- ✅ Duplicate phone numbers are rejected with a clear error message (relies on the DB unique constraint rather than a pre-check, so it stays correct even if RLS is enabled later)
+- ✅ Added `users` INSERT policy so the profile row can be saved under RLS
+
+**Files Modified:**
+- `signup.html` - Added phone number input to the sign up form
+- `auth.js` - Added phone validation, included phone in signup metadata, insert profile row with duplicate handling
+- `README.md` - Updated schema and RLS policies, changelog entry
 
 ### June 6, 2026
 **Features Added:**
