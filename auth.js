@@ -11,10 +11,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Create Supabase client safely
-    const supabaseUrl = "sb_publishable_jq0S9xtfWrfxFNYNybUSwQ_4FR1T7dd";
+    const supabaseUrl = "https://aywujanlhafdqcocyuex.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5d3VqYW5saGFmZHFjb2N5dWV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MzYyNTIsImV4cCI6MjA5NTMxMjI1Mn0.QWLUq6iRuXvTdujW3EDtF6uZKju5-kEoO1zNVbQMq-Y";
 
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    let supabase;
+    try {
+        supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    } catch (err) {
+        console.error("Failed to create Supabase client:", err);
+        return;
+    }
 
     // expose globally so functions can use it
     window.supabaseClient = supabase;
@@ -268,6 +274,10 @@ function checkPasswordStrength(password) {
 // ================= HELPERS =================
 
 async function getCurrentUser() {
+    if (!window.supabaseClient) {
+        console.error("Supabase client not initialized — check supabaseUrl/supabaseKey in auth.js");
+        return null;
+    }
     const { data } = await window.supabaseClient.auth.getUser();
     return data.user;
 }
