@@ -65,6 +65,14 @@ ALTER TABLE login_lookup ENABLE ROW LEVEL SECURITY;
 -- auth.users row (FK), and email/phone/login_id are all UNIQUE.
 CREATE POLICY "Anyone can insert a lookup row" ON login_lookup
   FOR INSERT WITH CHECK (true);
+
+-- Needed so the profile page can show the user's own phone number
+CREATE POLICY "Users can read own lookup row" ON login_lookup
+  FOR SELECT USING (auth.uid() = id);
+
+-- Needed so the profile page can save phone/email edits
+CREATE POLICY "Users can update own lookup row" ON login_lookup
+  FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 ```
 
 The resolver function is `SECURITY DEFINER`, so it can read the table server-side without needing a public SELECT policy (which would otherwise let anyone enumerate phone numbers / emails by querying the table directly):
@@ -147,6 +155,21 @@ CREATE INDEX idx_inventory_product_name ON inventory(product_name);
 - Replace placeholder values as needed
 
 ## Changelog
+
+### July 21, 2026 (later) — Editable profile + fixed invisible error messages
+**Bug fix:** `showError()` set the error text but never added the `.show` CSS class that actually makes `.error-message` visible (it's `display: none` by default). This meant error/success messages on login, signup, and elsewhere have never actually been appearing on screen. Fixed by having `showError`/new `showSuccess`/`clearMessage` helpers manage the `.show` class consistently everywhere.
+
+**Features Added:**
+- ✅ Profile page now shows Phone Number too (previously only Login ID, Name, Email)
+- ✅ Name, Email, and Phone are now editable via an "Edit Profile" / "Save" / "Cancel" flow; Login ID stays locked (not editable)
+- ✅ Editing checks for duplicates: a changed email is checked by Supabase Auth itself (the real account identity); a changed phone number is checked against `login_lookup`'s UNIQUE constraint. Both produce a specific "already registered" message rather than a generic error.
+
+**Known limitation:** since a phone/login-ID login is resolved through `login_lookup.email` (not the live auth email), changing your email updates that lookup value immediately — but the *actual* Supabase sign-in email doesn't change until you click the confirmation link. In that window, logging in by phone or ID will resolve to the new (unconfirmed) email, which won't yet work for `signInWithPassword`. This resolves itself once the email change is confirmed; logging in with the old email still works in the meantime.
+
+**Files Modified:**
+- `profile.html` - Added Phone field, Edit/Save/Cancel buttons
+- `auth.js` - Added `showSuccess`/`clearMessage` helpers, fixed `showError`, added phone fetch + full edit/save logic to `loadProfile`
+- `README.md` - Added SELECT/UPDATE RLS policies on `login_lookup` needed for the profile page
 
 ### July 21, 2026 — Specific duplicate-account messages + profile page
 **Features Added:**

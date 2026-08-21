@@ -42,7 +42,20 @@
                     </div>
                     <div class="form-group">
                         <label for="profileEmail">Email</label>
-                        <input type="text" id="profileEmail" readonly>
+                        <input type="email" id="profileEmail" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="profilePhone">Phone Number</label>
+                        <input type="tel" id="profilePhone" readonly>
+                    </div>
+
+                    <div class="form-actions" id="profileViewActions">
+                        <button type="button" id="editProfileBtn" class="btn-submit">Edit Profile</button>
+                    </div>
+
+                    <div class="form-actions" id="profileEditActions" style="display: none;">
+                        <button type="button" id="cancelProfileBtn" class="btn-cancel">Cancel</button>
+                        <button type="button" id="saveProfileBtn" class="btn-submit">Save Changes</button>
                     </div>
                 </div>
 

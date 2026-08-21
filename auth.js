@@ -86,9 +86,7 @@ async function handleSignup(e) {
     const confirmPassword = document.getElementById("signupConfirmPassword").value;
     const errorDiv = document.getElementById("signupError");
 
-    errorDiv.textContent = "";
-
-    if (!name || !email || !phone || !password || !confirmPassword) {
+    clearMessage(errorDiv);
         console.log("Form validation failed");
         return showError(errorDiv, "Please fill in all fields");
     }
@@ -182,8 +180,7 @@ async function handleSignup(e) {
                 return showError(errorDiv, "Account created, but we couldn't finish setup: " + lookupError.message);
             }
 
-            errorDiv.style.color = "green";
-            errorDiv.innerHTML = `Account created! Your login ID is <strong>${loginId}</strong> &mdash; you can log in with your email, phone, or this ID. Redirecting...`;
+            showSuccess(errorDiv, `Account created! Your login ID is <strong>${loginId}</strong> &mdash; you can log in with your email, phone, or this ID. Redirecting...`);
 
             setTimeout(() => {
                 localStorage.setItem("currentUser", JSON.stringify(data.user));
@@ -194,8 +191,6 @@ async function handleSignup(e) {
         console.error("Unexpected error:", err);
         showError(errorDiv, "Unexpected error: " + err.message);
     }
-}
-
 // ================= PHONE VALIDATION =================
 
 function isValidPhone(phone) {
@@ -216,9 +211,7 @@ async function handleLogin(e) {
     const password = document.getElementById("loginPassword").value;
     const errorDiv = document.getElementById("loginError");
 
-    errorDiv.textContent = "";
-
-    if (!identifier || !password) {
+    clearMessage(errorDiv);
         return showError(errorDiv, "Please fill in all fields");
     }
 
@@ -249,10 +242,11 @@ async function handleLogin(e) {
     localStorage.setItem("currentUser", JSON.stringify(data.user));
 
     window.location.href = "inventory.html";
-}
 
 
 // ================= PROFILE PAGE =================
+
+let originalProfileValues = null;
 
 async function loadProfile() {
     const contentEl = document.getElementById("profileContent");
@@ -261,7 +255,6 @@ async function loadProfile() {
     if (!contentEl) return;
 
     const loadingEl = document.getElementById("profileLoading");
-    const errorEl = document.getElementById("profileError");
 
     const user = await getCurrentUser();
 
@@ -273,12 +266,170 @@ async function loadProfile() {
 
     const meta = user.user_metadata || {};
 
+    // Phone isn't part of Supabase's user object — it lives in login_lookup.
+    let phone = "";
+    try {
+        const { data: lookupRow, error: lookupError } = await window.supabaseClient
+            .from('login_lookup')
+            .select('phone_number')
+            .eq('id', user.id)
+            .single();
+
+        if (lookupError) {
+            console.error("Could not load phone number:", lookupError);
+        } else if (lookupRow) {
+            phone = lookupRow.phone_number || "";
+        }
+    } catch (err) {
+        console.error("Unexpected error loading phone number:", err);
+    }
+
     document.getElementById("profileLoginId").value = meta.login_id || "—";
-    document.getElementById("profileName").value = meta.full_name || "—";
-    document.getElementById("profileEmail").value = user.email || "—";
+    document.getElementById("profileName").value = meta.full_name || "";
+    document.getElementById("profileEmail").value = user.email || "";
+    document.getElementById("profilePhone").value = phone;
+
+    originalProfileValues = {
+        name: meta.full_name || "",
+        email: user.email || "",
+        phone: phone
+    };
 
     if (loadingEl) loadingEl.style.display = "none";
     contentEl.style.display = "block";
+
+    setupProfileEditing(user.id);
+}
+
+function setupProfileEditing(userId) {
+    const editBtn = document.getElementById("editProfileBtn");
+    const saveBtn = document.getElementById("saveProfileBtn");
+    const cancelBtn = document.getElementById("cancelProfileBtn");
+    const viewActions = document.getElementById("profileViewActions");
+    const editActions = document.getElementById("profileEditActions");
+    const errorDiv = document.getElementById("profileError");
+
+    const nameInput = document.getElementById("profileName");
+    const emailInput = document.getElementById("profileEmail");
+    const phoneInput = document.getElementById("profilePhone");
+
+    if (!editBtn || !saveBtn || !cancelBtn) return;
+
+    function enterEditMode() {
+        clearMessage(errorDiv);
+        nameInput.removeAttribute("readonly");
+        emailInput.removeAttribute("readonly");
+        phoneInput.removeAttribute("readonly");
+        viewActions.style.display = "none";
+        editActions.style.display = "flex";
+        nameInput.focus();
+    }
+
+    function exitEditMode() {
+        nameInput.setAttribute("readonly", true);
+        emailInput.setAttribute("readonly", true);
+        phoneInput.setAttribute("readonly", true);
+        editActions.style.display = "none";
+        viewActions.style.display = "flex";
+    }
+
+    editBtn.addEventListener("click", enterEditMode);
+
+    cancelBtn.addEventListener("click", () => {
+        clearMessage(errorDiv);
+        nameInput.value = originalProfileValues.name;
+        emailInput.value = originalProfileValues.email;
+        phoneInput.value = originalProfileValues.phone;
+        exitEditMode();
+    });
+
+    saveBtn.addEventListener("click", async () => {
+        clearMessage(errorDiv);
+
+        const newName = nameInput.value.trim();
+        const newEmail = emailInput.value.trim();
+        const newPhone = phoneInput.value.trim();
+
+        if (!newName || !newEmail || !newPhone) {
+            return showError(errorDiv, "Please fill in all fields");
+        }
+
+        if (!isValidPhone(newPhone)) {
+            return showError(errorDiv, "Please enter a valid phone number");
+        }
+
+        const emailChanged = newEmail !== originalProfileValues.email;
+        const phoneChanged = newPhone !== originalProfileValues.phone;
+        const nameChanged = newName !== originalProfileValues.name;
+
+        if (!emailChanged && !phoneChanged && !nameChanged) {
+            exitEditMode();
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+
+        try {
+            // 1. Update the auth account (email + name) in one call. Supabase
+            //    enforces email uniqueness itself here, so a duplicate email
+            //    is caught before anything else changes.
+            if (emailChanged || nameChanged) {
+                const updatePayload = { data: { full_name: newName } };
+                if (emailChanged) updatePayload.email = newEmail;
+
+                const { error: updateError } = await window.supabaseClient.auth.updateUser(updatePayload);
+
+                if (updateError) {
+                    const msg = (updateError.message || "").toLowerCase();
+                    if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("already been registered")) {
+                        return showError(errorDiv, "This email is already registered to another account");
+                    }
+                    return showError(errorDiv, "Error: " + updateError.message);
+                }
+            }
+
+            // 2. Update phone number (and keep login_lookup.email in sync) —
+            //    the phone_number column's UNIQUE constraint catches duplicates.
+            if (phoneChanged || emailChanged) {
+                const lookupUpdate = {};
+                if (phoneChanged) lookupUpdate.phone_number = newPhone;
+                if (emailChanged) lookupUpdate.email = newEmail;
+
+                const { error: lookupUpdateError } = await window.supabaseClient
+                    .from('login_lookup')
+                    .update(lookupUpdate)
+                    .eq('id', userId);
+
+                if (lookupUpdateError) {
+                    if (lookupUpdateError.code === "23505") {
+                        const detail = ((lookupUpdateError.message || "") + " " + (lookupUpdateError.details || "")).toLowerCase();
+                        if (detail.includes("phone_number")) {
+                            return showError(errorDiv, "This phone number is already registered to another account");
+                        }
+                        return showError(errorDiv, "That email or phone number is already registered to another account");
+                    }
+                    return showError(errorDiv, "Could not update phone number: " + lookupUpdateError.message);
+                }
+            }
+
+            originalProfileValues = { name: newName, email: newEmail, phone: newPhone };
+            exitEditMode();
+
+            showSuccess(
+                errorDiv,
+                emailChanged
+                    ? "Saved! Check your inbox to confirm your new email — it won't take effect until you do."
+                    : "Profile updated."
+            );
+        } catch (err) {
+            console.error("Unexpected error updating profile:", err);
+            showError(errorDiv, "Unexpected error: " + err.message);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = "Save Changes";
+        }
+    });
 }
 
 document.addEventListener("DOMContentLoaded", loadProfile);
@@ -288,6 +439,18 @@ document.addEventListener("DOMContentLoaded", loadProfile);
 function showError(div, message) {
     div.style.color = "red";
     div.textContent = message;
+    div.classList.add("show");
+}
+
+function showSuccess(div, html) {
+    div.style.color = "green";
+    div.innerHTML = html;
+    div.classList.add("show");
+}
+
+function clearMessage(div) {
+    div.textContent = "";
+    div.classList.remove("show");
 }
 
 function checkPasswordStrength(password) {
